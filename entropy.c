@@ -1,6 +1,7 @@
 # include <stdio.h>
 # include <stdlib.h>
 # include <stdbool.h>
+# include <assert.h>
 # include <math.h>
 # include <time.h>
 
@@ -85,12 +86,32 @@ int guess (int lo, int hi, struct simplex_t *simplex) {
     // Best guess lo < x < hi
 
     double prob_all = simplex->cdf[hi - 1] - simplex->cdf[lo];
-    int i;
+    double prob_0   = simplex->cdf[lo];
+    double prob;
+    int mid;
 
-    for (i = lo; i < hi; ++i)
-        if ((simplex->cdf[i] - simplex->cdf[lo]) * 2 >= prob_all)
-            return i;
-    return -1;
+    assert(hi - lo > 1);
+
+    // B-search
+    while (true) {
+        if (hi - lo == 2)
+            return hi - 1;
+
+        mid = (lo + hi) >> 1;
+        // fprintf(stderr, "%d %d %d\n", lo, hi, mid);
+        prob = (simplex->cdf[mid] - prob_0) * 2.;
+        /* fprintf(stderr, "%d %d %lf %lf %lf %lf %lf\n",
+                mid_d, mid_u, simplex->cdf[mid_d], simplex->cdf[mid_u],
+                prob_d, prob_u, prob_all); */
+        if (prob <= prob_all){
+            lo = mid;
+        }
+        else{
+            if (mid == lo + 1)
+                return mid;
+            hi = mid;
+        }
+    }
 }
 
 int mid_guess (int lo, int hi, struct simplex_t *simplex) {
