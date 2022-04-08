@@ -11,18 +11,18 @@ struct simplex_t {
     double *cdf;
 };
 
-double rand_u () {
-    return rand() / (RAND_MAX + 1.0);
+double rand_u (unsigned int *seed) {
+    return rand_r(seed) / (RAND_MAX + 1.0);
 }
 
-double rand_exp (double lambda) {
-    return -log(1 - rand_u()) / lambda;
+double rand_exp (double lambda, unsigned int *seed) {
+    return -log(1 - rand_u(seed)) / lambda;
 }
 
-int rand_int (int n, int m) {
+int rand_int (int n, int m, unsigned int *seed) {
     // n <= ret < m
 
-    return n + (int)(rand_u() * (m - n));
+    return n + (int)(rand_u(seed) * (m - n));
 }
 
 struct simplex_t *init_simplex (int dim) {
@@ -70,19 +70,19 @@ struct simplex_t *uniform_simplex (int dim) {
     return simplex;
 }
 
-struct simplex_t *sample_simplex (int dim) {
+struct simplex_t *sample_simplex (int dim, unsigned int *seed) {
     struct simplex_t *simplex = init_simplex(dim);
     int i;
 
     for (i = 1; i <= dim; ++i)
-        simplex->pdf[i] = rand_exp(1.);
+        simplex->pdf[i] = rand_exp(1., seed);
 
     normalize_simplex(simplex);
 
     return simplex;
 }
 
-int guess (int lo, int hi, struct simplex_t *simplex) {
+int guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
     // Best guess lo < x < hi
 
     double prob_all = simplex->cdf[hi - 1] - simplex->cdf[lo];
@@ -114,21 +114,22 @@ int guess (int lo, int hi, struct simplex_t *simplex) {
     }
 }
 
-int mid_guess (int lo, int hi, struct simplex_t *simplex) {
+int mid_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
     // mid guess lo + hi / 2
 
     return (lo + hi) >> 1;
 }
 
 
-int rand_guess (int lo, int hi, struct simplex_t *simplex) {
+int rand_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
     // Random guess
 
-    return rand_int(lo + 1, hi);
+    return rand_int(lo + 1, hi, seed);
 }
 
 int game (int ans, struct simplex_t *simplex, 
-        int (*guess_method)(int, int, struct simplex_t*)) {
+        int (*guess_method)(int, int, struct simplex_t*, unsigned int*),
+        unsigned int *seed) {
     // lets play a game
 
     int len = 1;
@@ -138,7 +139,7 @@ int game (int ans, struct simplex_t *simplex,
 
     while (true) {
         len += 1;
-        mid  = guess_method(lo, hi, simplex);
+        mid  = guess_method(lo, hi, simplex, seed);
 
         if (mid == ans)
             return len;
@@ -150,12 +151,13 @@ int game (int ans, struct simplex_t *simplex,
 }
 
 double comp_avg_len (struct simplex_t *simplex, 
-        int (*guess_method)(int, int, struct simplex_t*)) {
+        int (*guess_method)(int, int, struct simplex_t*, unsigned int*),
+        unsigned int *seed) {
     double len = 0.;
     int i;
 
     for (i = 1; i <= simplex->dim; ++i)
-        len += simplex->pdf[i] * game(i, simplex, guess_method);
+        len += simplex->pdf[i] * game(i, simplex, guess_method, seed);
 
     return len;
 }
@@ -174,20 +176,20 @@ void simulate(int n, int repeat,
         double *avg_len, double *avg_len_m, double *avg_len_r,
         double *entropy) {
     int i;
-    struct simplex_t *simplex;
     
-    #pragma omp parallel for num_threads (32)
+    #pragma omp parallel for num_threads (8)
     for (i = 0; i < repeat; ++i) {
-        struct simplex_t *simplex = sample_simplex(n);
-        avg_len[i]   = comp_avg_len(simplex, guess);
-        avg_len_m[i] = comp_avg_len(simplex, mid_guess);
-        avg_len_r[i] = comp_avg_len(simplex, rand_guess);
+        unsigned int seed = rand();
+        struct simplex_t *simplex = sample_simplex(n, &seed);
+        avg_len[i]   = comp_avg_len(simplex, guess, &seed);
+        avg_len_m[i] = comp_avg_len(simplex, mid_guess, &seed);
+        avg_len_r[i] = comp_avg_len(simplex, rand_guess, &seed);
         entropy[i]   = comp_entropy(simplex);
         dest_simplex(simplex);
     }
 }
 
-# define R   16
+# define R   64
 # define N   240
 # define N0  2
 # define Del 0.05
