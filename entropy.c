@@ -1,9 +1,9 @@
-# include <stdio.h>
-# include <stdlib.h>
-# include <stdbool.h>
-# include <assert.h>
-# include <math.h>
-# include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <math.h>
+#include <time.h>
 
 struct simplex_t {
     int dim;
@@ -85,32 +85,19 @@ struct simplex_t *sample_simplex (int dim, unsigned int *seed) {
 int guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
     // Best guess lo < x < hi
 
-    double prob_all = simplex->cdf[hi - 1] - simplex->cdf[lo];
-    double prob_0   = simplex->cdf[lo];
-    double prob;
+    double cdf_t = (simplex->cdf[hi - 1] + simplex->cdf[lo]) * 0.5;
     int mid;
-
-    assert(hi - lo > 1);
 
     // B-search
     while (true) {
-        if (hi - lo == 2)
-            return hi - 1;
+        if (hi - lo <= 2)
+            return lo + 1;
 
-        mid = (lo + hi) >> 1;
-        // fprintf(stderr, "%d %d %d\n", lo, hi, mid);
-        prob = (simplex->cdf[mid] - prob_0) * 2.;
-        /* fprintf(stderr, "%d %d %lf %lf %lf %lf %lf\n",
-                mid_d, mid_u, simplex->cdf[mid_d], simplex->cdf[mid_u],
-                prob_d, prob_u, prob_all); */
-        if (prob <= prob_all){
+        mid = ((lo + hi) >> 1) + (hi & 1);
+        if (simplex->cdf[mid] <= cdf_t)
             lo = mid;
-        }
-        else{
-            if (mid == lo + 1)
-                return mid;
+        else
             hi = mid;
-        }
     }
 }
 
@@ -189,10 +176,10 @@ void simulate(int n, int repeat,
     }
 }
 
-# define R   64
-# define N   240
-# define N0  2
-# define Del 0.05
+#define R   64
+#define N   240
+#define N0  2
+#define Del 0.05
 // N0 <= N0 + Del * i < N0 + Del * N
 
 double entropy[R * N];
