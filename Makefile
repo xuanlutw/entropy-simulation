@@ -1,4 +1,4 @@
-all: draw
+all: plot
 
 entropy: entropy.c
 	gcc -O3 -lm -fopenmp entropy.c -o entropy
@@ -6,5 +6,5 @@ entropy: entropy.c
 entropy.data: entropy
 	./entropy > entropy.data
 
-draw: draw.py entropy.data
-	python draw.py
+plot: plot.py entropy.data
+	python plot.py
