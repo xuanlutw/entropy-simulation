@@ -222,7 +222,7 @@ int main(void) {
 
     for (i = 0; i < N; ++i) {
         n = (int)(pow(2., N0 + Del * i));
-        fprintf(stderr, "%d\n", n);
+        fprintf(stderr, "%d %d\n", i, n);
         simulate(n, R, avg_len + i * R, avg_len_m + i * R,
                 avg_len_x + i * R, avg_len_r + i * R, entropy + i * R);
     }
