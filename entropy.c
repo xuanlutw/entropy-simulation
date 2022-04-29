@@ -208,7 +208,7 @@ void simulate(int n, unsigned int *seed) {
 }
 
 #define R   64
-#define N   150
+#define N   240
 #define N0  2
 #define Del 0.05
 // N0 <= N0 + Del * i < N0 + Del * N
@@ -218,11 +218,11 @@ int main(void) {
     {
         int i, r, n;
         unsigned int seed = (unsigned)time(NULL) ^ omp_get_thread_num();
-        #pragma omp for
-        for (i = 0; i < N; ++i) {
-            fprintf(stderr, "%d %d\n", i, n);
-            for (r = 0; r < R; ++r) {
+        #pragma omp for collapse(2)
+        for (r = 0; r < R; ++r) {
+            for (i = 0; i < N; ++i) {
                 n = (int)(pow(2., N0 + Del * i));
+                fprintf(stderr, "%d %d %d\n", r, i, n);
                 simulate(n, &seed);
             }
         }
