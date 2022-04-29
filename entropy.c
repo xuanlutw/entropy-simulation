@@ -252,7 +252,7 @@ int main (int argc, char *argv[]) {
         #pragma omp for collapse(2)
         for (r = 0; r < R; ++r) {
             for (i = 0; i < N; ++i) {
-                n = (int)(pow(2., n0 + eps * i));
+                n = (int)(pow(2., n0 + eps * (rand_u(&seed) - 0.5 + i)));
                 fprintf(stderr, "%d %d %d\n", r, i, n);
                 simulate(n, &seed);
             }
