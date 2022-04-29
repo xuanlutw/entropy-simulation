@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <math.h>
 #include <time.h>
+#include <omp.h>
 
 struct simplex_t {
     int dim;
@@ -185,51 +186,42 @@ double comp_entropy (struct simplex_t *simplex) {
     return entropy;
 }
 
-void simulate(int n, int repeat, double *avg_len, double *avg_len_m,
-        double *avg_len_x, double *avg_len_r, double *entropy) {
-    int i;
-    
-    #pragma omp parallel for num_threads (8)
-    for (i = 0; i < repeat; ++i) {
-        unsigned int seed = rand();
-        struct simplex_t *simplex = sample_simplex(n, &seed);
-        avg_len[i]   = comp_avg_len(simplex, guess, &seed);
-        avg_len_m[i] = comp_avg_len(simplex, mid_guess, &seed);
-        avg_len_x[i] = comp_avg_len(simplex, max_guess, &seed);
-        avg_len_r[i] = comp_avg_len(simplex, rand_guess, &seed);
-        entropy[i]   = comp_entropy(simplex);
-        dest_simplex(simplex);
-    }
+void simulate(int n, unsigned int *seed) {
+    struct simplex_t *simplex = sample_simplex(n, seed);
+    double avg_len, avg_len_m, avg_len_x, avg_len_r, entropy;
+
+    avg_len   = comp_avg_len(simplex, guess, seed);
+    avg_len_m = comp_avg_len(simplex, mid_guess, seed);
+    avg_len_x = comp_avg_len(simplex, max_guess, seed);
+    avg_len_r = comp_avg_len(simplex, rand_guess, seed);
+    entropy   = comp_entropy(simplex);
+
+    dest_simplex(simplex);
+
+    printf("%lf, %lf, %lf, %lf, %lf\n", entropy,
+            avg_len, avg_len_m, avg_len_x, avg_len_r);
 }
 
 #define R   64
-#define N   240
+#define N   150
 #define N0  2
 #define Del 0.05
 // N0 <= N0 + Del * i < N0 + Del * N
 
-double entropy[R * N];
-double avg_len[R * N];
-double avg_len_m[R * N];
-double avg_len_x[R * N];
-double avg_len_r[R * N];
-
 int main(void) {
-    int i;
-    int n;
-
-    srand((unsigned)time(NULL));
-
-    for (i = 0; i < N; ++i) {
-        n = (int)(pow(2., N0 + Del * i));
-        fprintf(stderr, "%d %d\n", i, n);
-        simulate(n, R, avg_len + i * R, avg_len_m + i * R,
-                avg_len_x + i * R, avg_len_r + i * R, entropy + i * R);
+    #pragma omp parallel default(none) shared(stderr)
+    {
+        int i, r, n;
+        unsigned int seed = (unsigned)time(NULL) ^ omp_get_thread_num();
+        #pragma omp for
+        for (i = 0; i < N; ++i) {
+            fprintf(stderr, "%d %d\n", i, n);
+            for (r = 0; r < R; ++r) {
+                n = (int)(pow(2., N0 + Del * i));
+                simulate(n, &seed);
+            }
+        }
     }
-
-    for (i = 0; i < R * N; ++i)
-        printf("%lf, %lf, %lf, %lf, %lf\n", entropy[i],
-                avg_len[i], avg_len_m[i], avg_len_x[i], avg_len_r[i]);
 
     return 0;
 }
