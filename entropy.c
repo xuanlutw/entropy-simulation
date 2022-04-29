@@ -214,7 +214,7 @@ double comp_entropy (struct simplex_t *simplex) {
     return entropy;
 }
 
-void simulate(int n, unsigned int *seed) {
+void simulate (int n, unsigned int *seed) {
     struct simplex_t *simplex = sample_simplex(n, seed);
     double avg_len, avg_len_m, avg_len_x, avg_len_n, avg_len_r, entropy;
 
@@ -231,21 +231,28 @@ void simulate(int n, unsigned int *seed) {
             avg_len, avg_len_m, avg_len_x, avg_len_n, avg_len_r);
 }
 
-#define R   64
-#define N   240
-#define N0  2
-#define Del 0.05
-// N0 <= N0 + Del * i < N0 + Del * N
+int main (int argc, char *argv[]) {
+    double n0, eps;
+    int N, R;
+    // n0 + eps * [N]
+    
+    if (argc != 5) {
+        printf("Usage %s n0 eps N R\n", argv[0]);
+        exit(-1);
+    }
+    n0  = atof(argv[1]);
+    eps = atof(argv[2]);
+    N   = atof(argv[3]);
+    R   = atof(argv[4]);
 
-int main(void) {
-    #pragma omp parallel default(none) shared(stderr)
+    #pragma omp parallel default(none) shared(stderr, n0, eps, N, R)
     {
         int i, r, n;
         unsigned int seed = (unsigned)time(NULL) ^ omp_get_thread_num();
         #pragma omp for collapse(2)
         for (r = 0; r < R; ++r) {
             for (i = 0; i < N; ++i) {
-                n = (int)(pow(2., N0 + Del * i));
+                n = (int)(pow(2., n0 + eps * i));
                 fprintf(stderr, "%d %d %d\n", r, i, n);
                 simulate(n, &seed);
             }

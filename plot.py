@@ -13,9 +13,9 @@ avg_len_r = [float(x[5]) for x in data]
 
 plt.style.use('seaborn-ticks')
 plt.plot([0, 15], [0, 15], color="k")
-plt.scatter(entropy, avg_len_r, color="b", s=1)
 plt.scatter(entropy, avg_len_x, color="c", s=1)
 plt.scatter(entropy, avg_len_n, color="y", s=1)
+plt.scatter(entropy, avg_len_r, color="b", s=1)
 plt.scatter(entropy, avg_len_m, color="g", s=1)
 plt.scatter(entropy, avg_len,   color="r", s=1)
 plt.xlim(0, 15)
