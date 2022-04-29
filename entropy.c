@@ -46,19 +46,24 @@ struct simplex_t *init_simplex (int dim) {
 }
 
 void normalize_simplex (struct simplex_t *simplex) {
-    int i, j;
+    int lo, hi, idx;
+    int i;
+    double pdf = 0;
     double sum = 0;
 
     // Compute max_idx
-    for (i = 0; i <= simplex->dim; ++i)
-        for (j = i + 2; j <= simplex->dim + 1; ++j)
-            if (j == i + 2)
-                simplex->max_idx[i][j] = i + 1;
-            else if (simplex->pdf[j - 1] >
-                    simplex->pdf[simplex->max_idx[i][j - 1]])
-                simplex->max_idx[i][j] = j - 1;
-            else
-                simplex->max_idx[i][j] = simplex->max_idx[i][j - 1];
+    for (lo = 0; lo < simplex->dim; ++lo) {
+        idx = lo + 1;
+        pdf = simplex->pdf[idx];
+        simplex->max_idx[lo][lo + 2] = idx;
+        for (hi = lo + 3; hi <= simplex->dim + 1; ++hi) {
+            if (simplex->pdf[hi - 1] > pdf) {
+                idx = hi - 1;
+                pdf = simplex->pdf[idx];
+            }
+            simplex->max_idx[lo][hi] = idx;
+        }
+    }
 
     // Normalize
     for (i = 1; i <= simplex->dim; ++i)
