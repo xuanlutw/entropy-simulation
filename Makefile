@@ -1,7 +1,7 @@
 all: plot
 
 entropy: entropy.c
-	gcc -g -lm -fopenmp entropy.c -o entropy
+	gcc -O3 -lm -fopenmp entropy.c -o entropy
 
 entropy.data: entropy
 	./entropy > entropy.data

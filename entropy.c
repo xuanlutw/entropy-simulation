@@ -10,7 +10,6 @@ struct simplex_t {
     int dim;
     double *pdf;
     double *cdf;
-    int **max_idx;
 };
 
 double rand_u (unsigned int *seed) {
@@ -35,9 +34,6 @@ struct simplex_t *init_simplex (int dim) {
     simplex->dim     = dim;
     simplex->pdf     = malloc(sizeof(double) * (dim + 1));
     simplex->cdf     = malloc(sizeof(double) * (dim + 1));
-    simplex->max_idx = malloc(sizeof(int *)  * (dim + 1));
-    for (i = 0; i < dim + 1; ++i)
-        simplex->max_idx[i] = malloc(sizeof(int) * (dim + 2));
 
     simplex->pdf[0] = 0.;
     simplex->cdf[0] = 0.;
@@ -51,20 +47,6 @@ void normalize_simplex (struct simplex_t *simplex) {
     double pdf = 0;
     double sum = 0;
 
-    // Compute max_idx
-    for (lo = 0; lo < simplex->dim; ++lo) {
-        idx = lo + 1;
-        pdf = simplex->pdf[idx];
-        simplex->max_idx[lo][lo + 2] = idx;
-        for (hi = lo + 3; hi <= simplex->dim + 1; ++hi) {
-            if (simplex->pdf[hi - 1] > pdf) {
-                idx = hi - 1;
-                pdf = simplex->pdf[idx];
-            }
-            simplex->max_idx[lo][hi] = idx;
-        }
-    }
-
     // Normalize
     for (i = 1; i <= simplex->dim; ++i)
         sum += simplex->pdf[i];
@@ -77,9 +59,6 @@ void normalize_simplex (struct simplex_t *simplex) {
 void dest_simplex (struct simplex_t *simplex) {
     int i;
 
-    for (i = 0; i < simplex->dim + 1; ++i)
-        free(simplex->max_idx[i]);
-    free(simplex->max_idx);
     free(simplex->cdf);
     free(simplex->pdf);
     free(simplex);
@@ -136,8 +115,30 @@ int mid_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
 
 int max_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
     // guess the lo < idx < hi which has max pdf
+    int i, idx;
+    double pdf = 0.;
 
-    return simplex->max_idx[lo][hi];
+    for (i = lo + 1; i < hi; ++i)
+        if (simplex->pdf[i] > pdf) {
+            idx = i;
+            pdf = simplex->pdf[i];
+        }
+
+    return idx;
+}
+
+int min_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
+    // guess the lo < idx < hi which has min pdf
+    int i, idx;
+    double pdf = 1.;
+
+    for (i = lo + 1; i < hi; ++i)
+        if (simplex->pdf[i] < pdf) {
+            idx = i;
+            pdf = simplex->pdf[i];
+        }
+
+    return idx;
 }
 
 int rand_guess (int lo, int hi, struct simplex_t *simplex, unsigned int *seed) {
@@ -215,18 +216,19 @@ double comp_entropy (struct simplex_t *simplex) {
 
 void simulate(int n, unsigned int *seed) {
     struct simplex_t *simplex = sample_simplex(n, seed);
-    double avg_len, avg_len_m, avg_len_x, avg_len_r, entropy;
+    double avg_len, avg_len_m, avg_len_x, avg_len_n, avg_len_r, entropy;
 
     avg_len   = comp_avg_len_with_game_tree(simplex, guess, seed);
     avg_len_m = comp_avg_len_with_game_tree(simplex, mid_guess, seed);
     avg_len_x = comp_avg_len_with_game_tree(simplex, max_guess, seed);
+    avg_len_n = comp_avg_len_with_game_tree(simplex, min_guess, seed);
     avg_len_r = comp_avg_len_with_game_tree(simplex, rand_guess, seed);
     entropy   = comp_entropy(simplex);
 
     dest_simplex(simplex);
 
-    printf("%lf, %lf, %lf, %lf, %lf\n", entropy,
-            avg_len, avg_len_m, avg_len_x, avg_len_r);
+    printf("%lf, %lf, %lf, %lf, %lf, %lf\n", entropy,
+            avg_len, avg_len_m, avg_len_x, avg_len_n, avg_len_r);
 }
 
 #define R   64
