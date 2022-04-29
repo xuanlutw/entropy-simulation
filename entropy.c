@@ -181,6 +181,28 @@ double comp_avg_len (struct simplex_t *simplex,
     return len;
 }
 
+double _comp_avg_len_with_game_tree (struct simplex_t *simplex, 
+        unsigned int lo, unsigned int hi,
+        int (*guess_method)(int, int, struct simplex_t*, unsigned int*),
+        unsigned int *seed) {
+    double r_len, l_len;
+    int mid;
+
+    if (hi < lo + 2)
+        return 0.;
+
+    mid   = guess_method(lo, hi, simplex, seed);
+    r_len = _comp_avg_len_with_game_tree(simplex, mid, hi, guess_method, seed);
+    l_len = _comp_avg_len_with_game_tree(simplex, lo, mid, guess_method, seed);
+    return (simplex->cdf[hi - 1] - simplex->cdf[lo]) + r_len + l_len;
+}
+
+double comp_avg_len_with_game_tree (struct simplex_t *simplex, 
+        int (*guess_method)(int, int, struct simplex_t*, unsigned int*),
+        unsigned int *seed) {
+    return 1. + _comp_avg_len_with_game_tree(simplex, 0, simplex->dim + 1, guess_method, seed);
+}
+
 double comp_entropy (struct simplex_t *simplex) {
     double entropy = 0.;
     int i;
@@ -195,10 +217,10 @@ void simulate(int n, unsigned int *seed) {
     struct simplex_t *simplex = sample_simplex(n, seed);
     double avg_len, avg_len_m, avg_len_x, avg_len_r, entropy;
 
-    avg_len   = comp_avg_len(simplex, guess, seed);
-    avg_len_m = comp_avg_len(simplex, mid_guess, seed);
-    avg_len_x = comp_avg_len(simplex, max_guess, seed);
-    avg_len_r = comp_avg_len(simplex, rand_guess, seed);
+    avg_len   = comp_avg_len_with_game_tree(simplex, guess, seed);
+    avg_len_m = comp_avg_len_with_game_tree(simplex, mid_guess, seed);
+    avg_len_x = comp_avg_len_with_game_tree(simplex, max_guess, seed);
+    avg_len_r = comp_avg_len_with_game_tree(simplex, rand_guess, seed);
     entropy   = comp_entropy(simplex);
 
     dest_simplex(simplex);
