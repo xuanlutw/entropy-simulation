@@ -4,7 +4,7 @@ entropy: entropy.c
 	gcc -O3 -lm -fopenmp entropy.c -o entropy
 
 entropy.data: entropy.c entropy
-	./entropy $(n0) $(eps) $(N) $(R) > entropy.data
+	./entropy $(e_min) $(e_max) $(n_samples) > entropy.data
 
 plot: plot.py
 	python plot.py

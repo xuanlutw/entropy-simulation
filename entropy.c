@@ -232,30 +232,26 @@ void simulate (int n, unsigned int *seed) {
 }
 
 int main (int argc, char *argv[]) {
-    double n0, eps;
-    int N, R;
-    // n0 + eps * [N]
+    double e_min, e_max;
+    int n_samples;
     
-    if (argc != 5) {
-        printf("Usage %s n0 eps N R\n", argv[0]);
+    if (argc != 4) {
+        printf("Usage %s n_min n_max samples\n", argv[0]);
         exit(-1);
     }
-    n0  = atof(argv[1]);
-    eps = atof(argv[2]);
-    N   = atof(argv[3]);
-    R   = atof(argv[4]);
+    e_min     = atof(argv[1]);
+    e_max     = atof(argv[2]);
+    n_samples = atoi(argv[3]);
 
-    #pragma omp parallel default(none) shared(stderr, n0, eps, N, R)
+    #pragma omp parallel default(none) shared(stderr, e_min, e_max, n_samples)
     {
-        int i, r, n;
+        int i, n;
         unsigned int seed = (unsigned)time(NULL) ^ omp_get_thread_num();
-        #pragma omp for collapse(2)
-        for (r = 0; r < R; ++r) {
-            for (i = 0; i < N; ++i) {
-                n = (int)(pow(2., n0 + eps * (rand_u(&seed) - 0.5 + i)));
-                fprintf(stderr, "%d %d %d\n", r, i, n);
-                simulate(n, &seed);
-            }
+        #pragma omp for
+        for (i = 0; i < n_samples; ++i) {
+            n = (int)(pow(2., rand_u(&seed) * (e_max - e_min) + e_min));
+            fprintf(stderr, "%d %d %d\n", omp_get_thread_num(), i, n);
+            simulate(n, &seed);
         }
     }
 
